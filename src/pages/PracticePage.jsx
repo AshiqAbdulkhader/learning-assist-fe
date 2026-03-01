@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import AssistantPanel from "../components/AssistantPanel";
 import CodeEditor from "../components/CodeEditor";
@@ -8,27 +8,40 @@ import ResultPanel from "../components/ResultPanel";
 import { api } from "../lib/api";
 
 export default function PracticePage() {
+  const [allProblems, setAllProblems] = useState([]);
   const [problems, setProblems] = useState([]);
   const [activeProblemId, setActiveProblemId] = useState(null);
   const [activeProblem, setActiveProblem] = useState(null);
 
   const [code, setCode] = useState("");
   const [runResult, setRunResult] = useState(null);
-  const [hintResponse, setHintResponse] = useState(null);
   const [runError, setRunError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState("all");
+  const [attemptCounts, setAttemptCounts] = useState(() => readJson("attemptCounts", {}));
+  const [_draftsByProblem, setDraftsByProblem] = useState(() => readJson("problemDrafts", {}));
+  const [hintHistoryByProblem, setHintHistoryByProblem] = useState(() =>
+    readJson("hintHistoryByProblem", {}),
+  );
 
   const [loadingProblems, setLoadingProblems] = useState(false);
   const [loadingProblemDetails, setLoadingProblemDetails] = useState(false);
   const [running, setRunning] = useState(false);
   const [gettingHint, setGettingHint] = useState(false);
 
+  const activeHintHistory = hintHistoryByProblem[activeProblemId] ?? [];
+
   useEffect(() => {
     const load = async () => {
       setLoadingProblems(true);
       try {
         const list = await api.listProblems();
+        setAllProblems(list);
         setProblems(list);
-        if (list.length > 0) {
+        const storedProblemId = localStorage.getItem("lastProblemId");
+        if (storedProblemId && list.some((item) => item.id === storedProblemId)) {
+          setActiveProblemId(storedProblemId);
+        } else if (list.length > 0) {
           setActiveProblemId(list[0].id);
         }
       } catch (error) {
@@ -41,18 +54,41 @@ export default function PracticePage() {
   }, []);
 
   useEffect(() => {
+    let nextProblems = [...allProblems];
+    if (difficultyFilter !== "all") {
+      nextProblems = nextProblems.filter((item) => item.difficulty === difficultyFilter);
+    }
+    if (searchQuery.trim()) {
+      const lowered = searchQuery.trim().toLowerCase();
+      nextProblems = nextProblems.filter((item) => item.title.toLowerCase().includes(lowered));
+    }
+    setProblems(nextProblems);
+  }, [allProblems, difficultyFilter, searchQuery]);
+
+  useEffect(() => {
+    if (!activeProblemId && problems.length) {
+      setActiveProblemId(problems[0].id);
+      return;
+    }
+    if (activeProblemId && !problems.some((item) => item.id === activeProblemId) && problems.length) {
+      setActiveProblemId(problems[0].id);
+    }
+  }, [activeProblemId, problems]);
+
+  useEffect(() => {
     const loadProblem = async () => {
       if (!activeProblemId) {
         return;
       }
       setLoadingProblemDetails(true);
       setRunResult(null);
-      setHintResponse(null);
       setRunError("");
       try {
         const details = await api.getProblem(activeProblemId);
         setActiveProblem(details);
-        setCode(details.starter_code ?? "");
+        localStorage.setItem("lastProblemId", activeProblemId);
+        const storedDrafts = readJson("problemDrafts", {});
+        setCode(storedDrafts[activeProblemId] ?? details.starter_code ?? "");
       } catch (error) {
         setRunError(error.message);
       } finally {
@@ -62,7 +98,21 @@ export default function PracticePage() {
     loadProblem();
   }, [activeProblemId]);
 
-  const onRunCode = async () => {
+  useEffect(() => {
+    if (!activeProblemId || !activeProblem || activeProblem.id !== activeProblemId || loadingProblemDetails) {
+      return;
+    }
+    setDraftsByProblem((previous) => {
+      if (previous[activeProblemId] === code) {
+        return previous;
+      }
+      const next = { ...previous, [activeProblemId]: code };
+      localStorage.setItem("problemDrafts", JSON.stringify(next));
+      return next;
+    });
+  }, [activeProblemId, activeProblem, code, loadingProblemDetails]);
+
+  const onRunCode = useCallback(async () => {
     if (!activeProblemId) {
       return;
     }
@@ -71,12 +121,20 @@ export default function PracticePage() {
     try {
       const result = await api.runSubmission({ problem_id: activeProblemId, code });
       setRunResult(result);
+      setAttemptCounts((previous) => {
+        const next = {
+          ...previous,
+          [activeProblemId]: (previous[activeProblemId] ?? 0) + 1,
+        };
+        localStorage.setItem("attemptCounts", JSON.stringify(next));
+        return next;
+      });
     } catch (error) {
       setRunError(error.message);
     } finally {
       setRunning(false);
     }
-  };
+  }, [activeProblemId, code]);
 
   const onAskHint = async (question) => {
     if (!activeProblemId) {
@@ -85,18 +143,47 @@ export default function PracticePage() {
     setGettingHint(true);
     setRunError("");
     try {
+      const latestFailureSummary = runResult?.failed_case_summary
+        ? `${runResult.failed_case_summary.scope}: ${runResult.failed_case_summary.message}`
+        : null;
       const result = await api.getHint({
         problem_id: activeProblemId,
         code,
         latest_verdict: runResult?.verdict ?? "not_run",
         user_question: question,
+        attempt_number: activeHintHistory.length + 1,
+        latest_failure_summary: latestFailureSummary,
       });
-      setHintResponse(result);
+      setHintHistoryByProblem((previous) => {
+        const existing = previous[activeProblemId] ?? [];
+        const next = {
+          ...previous,
+          [activeProblemId]: [...existing, { question, response: result }],
+        };
+        localStorage.setItem("hintHistoryByProblem", JSON.stringify(next));
+        return next;
+      });
     } catch (error) {
       setRunError(error.message);
     } finally {
       setGettingHint(false);
     }
+  };
+
+  const onResetCode = () => {
+    if (!activeProblem) {
+      return;
+    }
+    setCode(activeProblem.starter_code ?? "");
+  };
+
+  const onAskFailureHint = () => {
+    if (!runResult?.failed_case_summary) {
+      return;
+    }
+    onAskHint(
+      `Help me debug this ${runResult.failed_case_summary.scope} failure: ${runResult.failed_case_summary.message}`,
+    );
   };
 
   return (
@@ -114,21 +201,40 @@ export default function PracticePage() {
           activeProblemId={activeProblemId}
           onSelectProblem={setActiveProblemId}
           loading={loadingProblems}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          difficultyFilter={difficultyFilter}
+          onDifficultyChange={setDifficultyFilter}
+          attemptCounts={attemptCounts}
         />
 
         <section className="centerColumn">
           <ProblemStatement problem={activeProblem} loading={loadingProblemDetails} />
-          <CodeEditor code={code} onChange={setCode} />
-          <ResultPanel result={runResult} error={runError} />
+          <CodeEditor
+            code={code}
+            onChange={setCode}
+            onRunCode={onRunCode}
+            onResetCode={onResetCode}
+          />
+          <ResultPanel result={runResult} error={runError} onAskFailureHint={onAskFailureHint} />
         </section>
 
         <AssistantPanel
           latestVerdict={runResult?.verdict}
           onAskHint={onAskHint}
           loading={gettingHint}
-          hintResponse={hintResponse}
+          history={activeHintHistory}
         />
       </main>
     </div>
   );
+}
+
+function readJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
 }

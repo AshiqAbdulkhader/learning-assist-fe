@@ -16,6 +16,7 @@
   display: grid;
   grid-template-columns: 260px 1fr 320px;
   gap: 1rem;
+  align-items: start;
 }
 
 .centerColumn {
@@ -34,6 +35,36 @@
 .panelTitle {
   margin: 0 0 0.7rem;
   font-size: 1rem;
+}
+
+.searchInput {
+  width: 100%;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.45rem 0.55rem;
+  margin-bottom: 0.5rem;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.chipButton {
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #e2e8f0;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.activeChip {
+  border-color: #38bdf8;
 }
 
 .problemList {
@@ -86,15 +117,42 @@
   color: #9ca3af;
 }
 
+.attemptCount {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
 .description {
   white-space: pre-wrap;
   line-height: 1.5;
+}
+
+.metaSection h4 {
+  margin: 0.6rem 0 0.25rem;
+}
+
+.metaSection ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.editorBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.editorActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .editorContainer {
   border: 1px solid #1f2937;
   border-radius: 12px;
   overflow: hidden;
+  height: 380px;
 }
 
 .primaryButton {
@@ -116,6 +174,19 @@
   margin: 0.3rem 0;
 }
 
+.sampleResults ul {
+  margin: 0.3rem 0;
+  padding-left: 1rem;
+}
+
+.passText {
+  color: #86efac;
+}
+
+.failText {
+  color: #fda4af;
+}
+
 .failedCase pre {
   background: #0f172a;
   border: 1px solid #1f2937;
@@ -128,6 +199,19 @@
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow: hidden;
+}
+
+.assistantHistory {
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-right: 0.2rem;
 }
 
 .inputArea {
@@ -147,6 +231,15 @@
   padding: 0.6rem;
 }
 
+.sourceBadge {
+  margin-left: 0.4rem;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
 .errorText {
   color: #fca5a5;
 }
@@ -158,6 +251,9 @@
 
   .assistantPanel {
     grid-column: 1 / -1;
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 }
 

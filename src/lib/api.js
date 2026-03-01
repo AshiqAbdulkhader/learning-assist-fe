@@ -24,7 +24,20 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  listProblems: () => request("/problems"),
+  listProblems: ({ difficulty, topic, q } = {}) => {
+    const params = new URLSearchParams();
+    if (difficulty) {
+      params.set("difficulty", difficulty);
+    }
+    if (topic) {
+      params.set("topic", topic);
+    }
+    if (q) {
+      params.set("q", q);
+    }
+    const query = params.toString();
+    return request(`/problems${query ? `?${query}` : ""}`);
+  },
   getProblem: (problemId) => request(`/problems/${problemId}`),
   runSubmission: (payload) =>
     request("/submissions/run", {
