@@ -1,8 +1,26 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const TOKEN_KEY = "access_token";
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY) ?? "";
+}
+
+export function setToken(token) {
+  const clean = token?.trim() ?? "";
+  if (clean) {
+    localStorage.setItem(TOKEN_KEY, clean);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+}
 
 async function request(path, options = {}) {
   const headers = { "Content-Type": "application/json" };
+  const token = getToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   if (options.headers) {
     Object.assign(headers, options.headers);
   }
@@ -62,4 +80,15 @@ export const api = {
         body: JSON.stringify(payload),
       }),
     ),
+  signup: (payload) =>
+    request("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  login: (payload) =>
+    request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  me: () => request("/auth/me"),
 };

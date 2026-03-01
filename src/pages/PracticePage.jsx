@@ -7,7 +7,7 @@ import ProblemStatement from "../components/ProblemStatement";
 import ResultPanel from "../components/ResultPanel";
 import { api } from "../lib/api";
 
-export default function PracticePage() {
+export default function PracticePage({ user, onLogout }) {
   const [allProblems, setAllProblems] = useState([]);
   const [problems, setProblems] = useState([]);
   const [activeProblemId, setActiveProblemId] = useState(null);
@@ -213,9 +213,15 @@ export default function PracticePage() {
     <div className="appShell">
       <header className="header">
         <h1>Agentic Coding IDE</h1>
-        <button className="primaryButton" onClick={onRunCode} disabled={running}>
-          {running ? "Running..." : "Run Code"}
-        </button>
+        <div className="headerActions">
+          <span className="muted">{user?.email}</span>
+          <button className="primaryButton" onClick={onRunCode} disabled={running}>
+            {running ? "Running..." : "Run Code"}
+          </button>
+          <button className="chipButton" onClick={onLogout} type="button">
+            Logout
+          </button>
+        </div>
       </header>
 
       <main className="layout">
