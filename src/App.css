@@ -206,6 +206,7 @@
 }
 
 .assistantHistory {
+  flex: 1 1 auto;
   overflow-y: auto;
   min-height: 0;
   display: flex;
@@ -216,6 +217,8 @@
 
 .inputArea {
   width: 100%;
+  min-height: 96px;
+  flex-shrink: 0;
   resize: vertical;
   border: 1px solid #334155;
   border-radius: 8px;
