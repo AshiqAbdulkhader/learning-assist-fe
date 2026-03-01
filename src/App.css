@@ -240,6 +240,20 @@
   text-transform: uppercase;
 }
 
+.controlLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.modeSelect {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.35rem 0.45rem;
+}
+
 .errorText {
   color: #fca5a5;
 }

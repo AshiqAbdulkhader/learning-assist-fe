@@ -19,10 +19,15 @@ export default function PracticePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [attemptCounts, setAttemptCounts] = useState(() => readJson("attemptCounts", {}));
-  const [_draftsByProblem, setDraftsByProblem] = useState(() => readJson("problemDrafts", {}));
+  const [draftsByProblem, setDraftsByProblem] = useState(() => readJson("problemDrafts", {}));
   const [hintHistoryByProblem, setHintHistoryByProblem] = useState(() =>
     readJson("hintHistoryByProblem", {}),
   );
+  const [conversationIdsByProblem, setConversationIdsByProblem] = useState(() =>
+    readJson("conversationIdsByProblem", {}),
+  );
+  const [coachingMode, setCoachingMode] = useState("balanced");
+  const [focusArea, setFocusArea] = useState("general");
 
   const [loadingProblems, setLoadingProblems] = useState(false);
   const [loadingProblemDetails, setLoadingProblemDetails] = useState(false);
@@ -30,6 +35,7 @@ export default function PracticePage() {
   const [gettingHint, setGettingHint] = useState(false);
 
   const activeHintHistory = hintHistoryByProblem[activeProblemId] ?? [];
+  const activeConversationId = conversationIdsByProblem[activeProblemId] ?? null;
 
   useEffect(() => {
     const load = async () => {
@@ -102,15 +108,13 @@ export default function PracticePage() {
     if (!activeProblemId || !activeProblem || activeProblem.id !== activeProblemId || loadingProblemDetails) {
       return;
     }
-    setDraftsByProblem((previous) => {
-      if (previous[activeProblemId] === code) {
-        return previous;
-      }
-      const next = { ...previous, [activeProblemId]: code };
-      localStorage.setItem("problemDrafts", JSON.stringify(next));
-      return next;
-    });
-  }, [activeProblemId, activeProblem, code, loadingProblemDetails]);
+    if (draftsByProblem[activeProblemId] === code) {
+      return;
+    }
+    const next = { ...draftsByProblem, [activeProblemId]: code };
+    setDraftsByProblem(next);
+    localStorage.setItem("problemDrafts", JSON.stringify(next));
+  }, [activeProblemId, activeProblem, code, loadingProblemDetails, draftsByProblem]);
 
   const onRunCode = useCallback(async () => {
     if (!activeProblemId) {
@@ -136,7 +140,7 @@ export default function PracticePage() {
     }
   }, [activeProblemId, code]);
 
-  const onAskHint = async (question) => {
+  const onAskHint = async (question, options = {}) => {
     if (!activeProblemId) {
       return;
     }
@@ -153,7 +157,18 @@ export default function PracticePage() {
         user_question: question,
         attempt_number: activeHintHistory.length + 1,
         latest_failure_summary: latestFailureSummary,
+        coaching_mode: coachingMode,
+        focus_area: focusArea,
+        conversation_id: activeConversationId,
+        requested_hint_level: options.requestedHintLevel ?? null,
       });
+      if (result.conversation_id && !activeConversationId) {
+        setConversationIdsByProblem((previous) => {
+          const next = { ...previous, [activeProblemId]: result.conversation_id };
+          localStorage.setItem("conversationIdsByProblem", JSON.stringify(next));
+          return next;
+        });
+      }
       setHintHistoryByProblem((previous) => {
         const existing = previous[activeProblemId] ?? [];
         const next = {
@@ -184,6 +199,14 @@ export default function PracticePage() {
     onAskHint(
       `Help me debug this ${runResult.failed_case_summary.scope} failure: ${runResult.failed_case_summary.message}`,
     );
+  };
+
+  const onEscalateHint = () => {
+    const nextHintLevel =
+      activeHintHistory[activeHintHistory.length - 1]?.response?.next_hint_level ?? "next_step";
+    onAskHint(`Please escalate one level to ${nextHintLevel} without giving full code.`, {
+      requestedHintLevel: nextHintLevel,
+    });
   };
 
   return (
@@ -222,8 +245,13 @@ export default function PracticePage() {
         <AssistantPanel
           latestVerdict={runResult?.verdict}
           onAskHint={onAskHint}
+          onEscalateHint={onEscalateHint}
           loading={gettingHint}
           history={activeHintHistory}
+          coachingMode={coachingMode}
+          onCoachingModeChange={setCoachingMode}
+          focusArea={focusArea}
+          onFocusAreaChange={setFocusArea}
         />
       </main>
     </div>

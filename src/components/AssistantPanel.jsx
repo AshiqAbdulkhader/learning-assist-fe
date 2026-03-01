@@ -2,11 +2,23 @@ import { useState } from "react";
 
 export default function AssistantPanel({
   onAskHint,
+  onEscalateHint,
   latestVerdict,
   loading,
   history,
+  coachingMode,
+  onCoachingModeChange,
+  focusArea,
+  onFocusAreaChange,
 }) {
   const [question, setQuestion] = useState("");
+  const focusOptions = [
+    { id: "general", label: "General" },
+    { id: "debugging", label: "Debugging" },
+    { id: "edge_cases", label: "Edge cases" },
+    { id: "complexity", label: "Complexity" },
+    { id: "dry_run", label: "Dry run" },
+  ];
 
   const submit = () => {
     if (!question.trim()) {
@@ -20,6 +32,29 @@ export default function AssistantPanel({
     <section className="panel assistantPanel">
       <h2 className="panelTitle">Agent Coach</h2>
       <p className="muted">Latest verdict: {latestVerdict ?? "Not run yet"}</p>
+      <label className="muted controlLabel">
+        Coaching mode
+        <select
+          className="modeSelect"
+          value={coachingMode}
+          onChange={(event) => onCoachingModeChange(event.target.value)}
+        >
+          <option value="strict">Strict</option>
+          <option value="balanced">Balanced</option>
+          <option value="fast-track">Fast-track</option>
+        </select>
+      </label>
+      <div className="filterRow">
+        {focusOptions.map((option) => (
+          <button
+            key={option.id}
+            className={`chipButton ${focusArea === option.id ? "activeChip" : ""}`}
+            onClick={() => onFocusAreaChange(option.id)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
       <div className="filterRow">
         <button className="chipButton" onClick={() => onAskHint("Give me the next smallest hint only.")}>
           Next smallest hint
@@ -29,6 +64,9 @@ export default function AssistantPanel({
         </button>
         <button className="chipButton" onClick={() => onAskHint("How can I optimize runtime and memory?")}>
           Optimize complexity
+        </button>
+        <button className="chipButton" onClick={onEscalateHint}>
+          Escalate hint
         </button>
       </div>
       <textarea
@@ -51,6 +89,8 @@ export default function AssistantPanel({
                 <span className="sourceBadge">{entry.response.source}</span>
               </p>
               <p className="muted">Level: {entry.response.hint_level}</p>
+              <p className="muted">Next: {entry.response.next_hint_level}</p>
+              <p className="muted">Confidence: {Math.round((entry.response.confidence ?? 0) * 100)}%</p>
               <h3>Guided hint</h3>
               <p>{entry.response.guided_hint}</p>
               <h3>Strategy</h3>
