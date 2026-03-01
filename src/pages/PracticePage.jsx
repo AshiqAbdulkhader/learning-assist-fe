@@ -229,7 +229,6 @@ export default function PracticePage() {
     </div>
   );
 }
-
 function readJson(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -238,3 +237,4 @@ function readJson(key, fallback) {
     return fallback;
   }
 }
+
