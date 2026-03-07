@@ -209,6 +209,24 @@ export default function PracticePage({ user, onLogout }) {
     });
   };
 
+  const onClearHints = () => {
+    if (!activeProblemId) {
+      return;
+    }
+    setHintHistoryByProblem((previous) => {
+      const next = { ...previous };
+      delete next[activeProblemId];
+      localStorage.setItem("hintHistoryByProblem", JSON.stringify(next));
+      return next;
+    });
+    setConversationIdsByProblem((previous) => {
+      const next = { ...previous };
+      delete next[activeProblemId];
+      localStorage.setItem("conversationIdsByProblem", JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
     <div className="appShell">
       <header className="header">
@@ -252,6 +270,7 @@ export default function PracticePage({ user, onLogout }) {
           latestVerdict={runResult?.verdict}
           onAskHint={onAskHint}
           onEscalateHint={onEscalateHint}
+          onClearHints={onClearHints}
           loading={gettingHint}
           history={activeHintHistory}
           coachingMode={coachingMode}

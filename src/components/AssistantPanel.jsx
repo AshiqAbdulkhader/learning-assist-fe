@@ -3,6 +3,7 @@ import { useState } from "react";
 export default function AssistantPanel({
   onAskHint,
   onEscalateHint,
+  onClearHints,
   latestVerdict,
   loading,
   history,
@@ -76,13 +77,18 @@ export default function AssistantPanel({
         onChange={(event) => setQuestion(event.target.value)}
         placeholder="Ask for guidance, optimization ideas, or debugging help..."
       />
-      <button className="primaryButton" onClick={submit} disabled={loading}>
-        {loading ? "Thinking..." : "Get Hint"}
-      </button>
+      <div className="filterRow">
+        <button className="primaryButton" onClick={submit} disabled={loading}>
+          {loading ? "Thinking..." : "Get Hint"}
+        </button>
+        <button className="chipButton" onClick={onClearHints} disabled={loading || !history.length}>
+          Clear hints
+        </button>
+      </div>
 
       <div className="assistantHistory">
         {history.length ? (
-          history.map((entry, index) => (
+          [...history].reverse().map((entry, index) => (
             <div key={`${entry.question}-${index}`} className="hintCard">
               <p className="muted">
                 Q: {entry.question}
